@@ -388,6 +388,11 @@ def get_all_passes() -> dict[str, Callable[[], type[ModulePass]]]:
 
         return lower_mpi.LowerMPIPass
 
+    def get_lower_pmov():
+        from xdsl.backend.riscv.lowering import lower_pmov
+
+        return lower_pmov.LowerPMovPass
+
     def get_lower_riscv_func():
         from xdsl.transforms import lower_riscv_func
 
@@ -482,6 +487,11 @@ def get_all_passes() -> dict[str, Callable[[], type[ModulePass]]]:
         from xdsl.transforms import riscv_allocate_registers
 
         return riscv_allocate_registers.RISCVAllocateRegistersPass
+
+    def get_riscv_allocate_infinite_registers():
+        from xdsl.transforms import riscv_allocate_infinite_registers
+
+        return riscv_allocate_infinite_registers.RISCVAllocateInfiniteRegistersPass
 
     def get_riscv_prologue_epilogue_insertion():
         from xdsl.backend.riscv import prologue_epilogue_insertion
@@ -694,6 +704,7 @@ def get_all_passes() -> dict[str, Callable[[], type[ModulePass]]]:
         "lower-csl-wrapper": get_lower_csl_wrapper,
         "lower-hls": get_lower_hls,
         "lower-mpi": get_lower_mpi,
+        "lower-pmov": get_lower_pmov,
         "lower-riscv-func": get_lower_riscv_func,
         "lower-riscv-scf-to-labels": get_lower_riscv_scf_to_labels,
         "lower-snitch": get_lower_snitch,
@@ -713,6 +724,7 @@ def get_all_passes() -> dict[str, Callable[[], type[ModulePass]]]:
         "reconcile-unrealized-casts": get_reconcile_unrealized_casts,
         "replace-incompatible-fpga": get_replace_incompatible_fpga,
         "riscv-allocate-registers": get_riscv_allocate_registers,
+        "riscv-allocate-infinite-registers": get_riscv_allocate_infinite_registers,
         "riscv-prologue-epilogue-insertion": get_riscv_prologue_epilogue_insertion,
         "riscv-scf-loop-range-folding": get_riscv_scf_loop_range_folding,
         "scf-for-loop-flatten": get_scf_for_loop_flatten,
