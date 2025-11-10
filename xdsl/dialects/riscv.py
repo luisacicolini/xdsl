@@ -4803,6 +4803,21 @@ class VFMulSOp(RdRsRsFloatOperation[FloatRegisterType, FloatRegisterType]):
     traits = traits_def(Pure())
 
 
+@irdl_op_definition
+class PMovOp(IRDLOperation):
+    name = "riscv.pmov"
+
+    inputs = var_operand_def(IntRegisterType)
+    outputs = var_result_def(IntRegisterType)
+
+    assembly_format = "$inputs attr-dict `:` functional-type($inputs, $outputs)"
+
+    def __init__(
+        self, inputs: Sequence[SSAValue], output_types: Sequence[IntRegisterType]
+    ):
+        super().__init__(operands=inputs, result_types=output_types)
+
+
 # endregion
 
 
@@ -5002,6 +5017,7 @@ RISCV = Dialect(
         FMvDOp,
         VFAddSOp,
         VFMulSOp,
+        PMovOp,
     ],
     [
         IntRegisterType,
