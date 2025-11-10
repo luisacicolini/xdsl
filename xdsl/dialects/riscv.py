@@ -4817,6 +4817,16 @@ class PMovOp(IRDLOperation):
     ):
         super().__init__(operands=inputs, result_types=output_types)
 
+    def verify_(self) -> None:
+        if len(self.inputs) != len(self.results):
+            raise VerifyException(
+                "The number of input operands must be equal to the number of output results."
+            )
+        if len(set(self.inputs.types)) != len(self.operands):
+            raise VerifyException("All input types must be unique.")
+        if len(set(self.results.types)) != len(self.results):
+            raise VerifyException("All result types must be unique.")
+
 
 # endregion
 
