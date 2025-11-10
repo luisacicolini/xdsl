@@ -39,6 +39,7 @@ from xdsl.ir import (
     Operation,
     Region,
     SSAValue,
+    SSAValues,
 )
 from xdsl.irdl import (
     IRDLOperation,
@@ -4822,9 +4823,21 @@ class PMovOp(IRDLOperation):
             raise VerifyException(
                 "The number of input operands must be equal to the number of output results."
             )
-        if len(set(self.inputs.types)) != len(self.operands):
+        allocated_operands = SSAValues(
+            operand
+            for operand in self.operands
+            if operand.type != Registers.UNALLOCATED_INT
+        )
+        allocated_results = SSAValues(
+            result
+            for result in self.results
+            if result.type != Registers.UNALLOCATED_INT
+        )
+        input_types = set(allocated_operands.types)
+        output_types = set(allocated_results.types)
+        if len(input_types) != len(allocated_operands):
             raise VerifyException("All input types must be unique.")
-        if len(set(self.results.types)) != len(self.results):
+        if len(output_types) != len(allocated_results):
             raise VerifyException("All result types must be unique.")
 
 
