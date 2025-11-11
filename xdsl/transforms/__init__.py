@@ -641,7 +641,7 @@ def get_all_passes() -> dict[str, Callable[[], type[ModulePass]]]:
         "arith-add-fastmath": get_arith_add_fastmath,
         "canonicalize-dmp": get_canonicalize_dmp,
         "canonicalize": get_canonicalize,
-        "canonicaliz-register-allocation": get_canonicalize_register_allocation,
+        "canonicalize-register-allocation": get_canonicalize_register_allocation,
         "constant-fold-interp": get_constant_fold_interp,
         "control-flow-hoist": get_control_flow_hoist,
         "convert-arith-to-riscv-snitch": get_convert_arith_to_riscv_snitch,
