@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from collections.abc import Set as AbstractSet
 from io import StringIO
 from typing import IO, Annotated, Generic, Literal, TypeAlias
+from enum import Enum
 
 from typing_extensions import Self, TypeVar
 
@@ -342,7 +343,35 @@ Imm12Attr = IntegerAttr[Annotated[IntegerType, i12]]
 Imm20Attr = IntegerAttr[Annotated[IntegerType, i20]]
 Imm32Attr = IntegerAttr[Annotated[IntegerType, i32]]
 
+class RISCVVariant(Enum):
+    RV32 = "rv32"
+    RV64 = "rv64"
+    
+    @property
+    def shift_imm_width(self) -> IntegerType:
+        return ui5 if self == RISCVVariant.RV32 else ui6
 
+@irdl_attr_definition
+class RISCVVariantAttr(Data[RISCVVariant]):
+    """
+    Attribute representing the RISC-V architecture (RV32 or RV64).
+    """
+    name = "riscv.variant"
+
+    @classmethod
+    def parse_parameter(cls, parser: AttrParser) -> RISCVVariant:
+        with parser.in_angle_brackets():
+            if parser.parse_optional_keyword("rv32"):
+                return RISCVVariant.RV32
+            if parser.parse_optional_keyword("rv64"):
+                return RISCVVariant.RV64
+            parser.raise_error("Expected 'rv32' or 'rv64'")
+
+    def print_parameter(self, printer: Printer) -> None:
+        with printer.in_angle_brackets():
+            printer.print_string(self.data.value)
+ 
+            
 @irdl_attr_definition
 class LabelAttr(Data[str]):
     name = "riscv.label"
@@ -827,6 +856,7 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
     rd = result_def(IntRegisterType)
     rs1 = operand_def(IntRegisterType)
     immediate = attr_def(base(UImm6Attr) | base(LabelAttr))
+    variant = attr_def(RISCVVariantAttr)
 
     def __init__(
         self,
@@ -834,10 +864,18 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
         immediate: int | UImm6Attr | str | LabelAttr,
         *,
         rd: IntRegisterType = Registers.UNALLOCATED_INT,
+        variant: RISCVVariantAttr | str,
         comment: str | StringAttr | None = None,
     ):
+        if isinstance(variant, str):
+            variant_enum = RISCVVariant(variant)
+            variant = RISCVVariantAttr(variant_enum)
+        else:
+            variant_enum = variant.data
+        
         if isinstance(immediate, int):
-            immediate = IntegerAttr(immediate, ui6)
+            imm_type = variant_enum.shift_imm_width
+            immediate = IntegerAttr(immediate, imm_type)
         elif isinstance(immediate, str):
             immediate = LabelAttr(immediate)
 
@@ -847,6 +885,7 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
             operands=[rs1],
             result_types=[rd],
             attributes={
+                "variant": variant,
                 "immediate": immediate,
                 "comment": comment,
             },
@@ -858,7 +897,13 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
     @classmethod
     def custom_parse_attributes(cls, parser: Parser) -> dict[str, Attribute]:
         attributes = dict[str, Attribute]()
-        attributes["immediate"] = parse_immediate_value(parser, ui6)
+        attributes["variant"] = parser.parse_attribute()
+        if isinstance(attributes["variant"], RISCVVariantAttr):
+            imm_type = attributes["variant"].data.shift_imm_width
+        else:
+            imm_type = ui5 
+        parser.parse_punctuation(",")  
+        attributes["immediate"] = parse_immediate_value(parser, imm_type)
         return attributes
 
     def custom_print_attributes(self, printer: Printer) -> AbstractSet[str]:
@@ -5049,5 +5094,6 @@ RISCV = Dialect(
         FloatRegisterType,
         LabelAttr,
         FastMathFlagsAttr,
+        RISCVVariantAttr,
     ],
 )
