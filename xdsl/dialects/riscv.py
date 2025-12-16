@@ -5,7 +5,6 @@ from collections.abc import Sequence
 from collections.abc import Set as AbstractSet
 from io import StringIO
 from typing import IO, Annotated, Generic, Literal, TypeAlias
-from enum import Enum
 
 from typing_extensions import Self, TypeVar
 
@@ -41,7 +40,10 @@ from xdsl.ir import (
     Region,
     SSAValue,
     SSAValues,
+    StrEnum,
+    SpacedOpaqueSyntaxAttribute,
 )
+from xdsl.ir.core import EnumAttribute
 from xdsl.irdl import (
     IRDLOperation,
     attr_def,
@@ -343,7 +345,7 @@ Imm12Attr = IntegerAttr[Annotated[IntegerType, i12]]
 Imm20Attr = IntegerAttr[Annotated[IntegerType, i20]]
 Imm32Attr = IntegerAttr[Annotated[IntegerType, i32]]
 
-class RISCVVariant(Enum):
+class RISCVVariant(StrEnum):
     RV32 = "rv32"
     RV64 = "rv64"
     
@@ -352,24 +354,11 @@ class RISCVVariant(Enum):
         return ui5 if self == RISCVVariant.RV32 else ui6
 
 @irdl_attr_definition
-class RISCVVariantAttr(Data[RISCVVariant]):
+class RISCVVariantAttr(EnumAttribute[RISCVVariant], SpacedOpaqueSyntaxAttribute):
     """
     Attribute representing the RISC-V architecture (RV32 or RV64).
     """
     name = "riscv.variant"
-
-    @classmethod
-    def parse_parameter(cls, parser: AttrParser) -> RISCVVariant:
-        with parser.in_angle_brackets():
-            if parser.parse_optional_keyword("rv32"):
-                return RISCVVariant.RV32
-            if parser.parse_optional_keyword("rv64"):
-                return RISCVVariant.RV64
-            parser.raise_error("Expected 'rv32' or 'rv64'")
-
-    def print_parameter(self, printer: Printer) -> None:
-        with printer.in_angle_brackets():
-            printer.print_string(self.data.value)
  
             
 @irdl_attr_definition
@@ -897,11 +886,13 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
     @classmethod
     def custom_parse_attributes(cls, parser: Parser) -> dict[str, Attribute]:
         attributes = dict[str, Attribute]()
-        attributes["variant"] = parser.parse_attribute()
-        if isinstance(attributes["variant"], RISCVVariantAttr):
-            imm_type = attributes["variant"].data.shift_imm_width
-        else:
-            imm_type = ui5 
+        variant_str = parser.parse_str_literal()
+        variant = RISCVVariant(variant_str)
+        attributes["variant"] = RISCVVariantAttr(variant)
+        imm_type = variant.shift_imm_width
+
+            
+            
         parser.parse_punctuation(",")  
         attributes["immediate"] = parse_immediate_value(parser, imm_type)
         return attributes
