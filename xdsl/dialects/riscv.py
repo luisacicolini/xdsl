@@ -890,9 +890,6 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
         variant = RISCVVariant(variant_str)
         attributes["variant"] = RISCVVariantAttr(variant)
         imm_type = variant.shift_imm_width
-
-            
-            
         parser.parse_punctuation(",")  
         attributes["immediate"] = parse_immediate_value(parser, imm_type)
         return attributes
