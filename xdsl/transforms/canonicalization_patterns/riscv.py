@@ -1,6 +1,6 @@
 from typing import cast
 
-from xdsl.dialects import riscv, riscv_snitch, riscv32, riscv64
+from xdsl.dialects import riscv, riscv_snitch
 from xdsl.dialects.builtin import IntegerAttr
 from xdsl.dialects.utils import FastMathFlag
 from xdsl.ir import OpResult, SSAValue
@@ -204,7 +204,7 @@ class SubAddi(RewritePattern):
 
 class ShiftLeftImmediate(RewritePattern):
     @op_type_rewrite_pattern
-    def match_and_rewrite(self, op: riscv32.RV32SlliOp | riscv64.RV64SlliOp, rewriter: PatternRewriter) -> None:
+    def match_and_rewrite(self, op: riscv.SlliOp, rewriter: PatternRewriter) -> None:
         if (
             isinstance(op.rs1, OpResult)
             and isinstance(op.rs1.op, riscv.LiOp)
@@ -225,7 +225,7 @@ class ShiftLeftbyZero(RewritePattern):
     """
 
     @op_type_rewrite_pattern
-    def match_and_rewrite(self, op: riscv32.RV32SlliOp | riscv64.RV64SlliOp, rewriter: PatternRewriter) -> None:
+    def match_and_rewrite(self, op: riscv.SlliOp, rewriter: PatternRewriter) -> None:
         # check if the shift amount is zero
         if isinstance(op.immediate, IntegerAttr) and op.immediate.value.data == 0:
             rewriter.replace_matched_op(riscv.MVOp(op.rs1, rd=op.rd.type))
@@ -237,7 +237,7 @@ class ShiftRightbyZero(RewritePattern):
     """
 
     @op_type_rewrite_pattern
-    def match_and_rewrite(self, op: riscv32.RV32SrliOp | riscv64.RV64SrliOp, rewriter: PatternRewriter) -> None:
+    def match_and_rewrite(self, op: riscv.SrliOp, rewriter: PatternRewriter) -> None:
         # check if the shift amount is zero
         if isinstance(op.immediate, IntegerAttr) and op.immediate.value.data == 0:
             rewriter.replace_matched_op(riscv.MVOp(op.rs1, rd=op.rd.type))

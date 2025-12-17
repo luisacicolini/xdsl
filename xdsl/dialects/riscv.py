@@ -1544,7 +1544,6 @@ class XoriOp(RdRsImmIntegerOperation):
 
     name = "riscv.xori"
 
-
 class SlliOpHasCanonicalizationPatternsTrait(HasCanonicalizationPatternsTrait):
     @classmethod
     def get_canonicalization_patterns(cls) -> tuple[RewritePattern, ...]:
@@ -1555,6 +1554,8 @@ class SlliOpHasCanonicalizationPatternsTrait(HasCanonicalizationPatternsTrait):
 
         return (ShiftLeftImmediate(), ShiftLeftbyZero())
 
+class SlliOp(RdRsImmShiftOperation):
+    traits = traits_def(SlliOpHasCanonicalizationPatternsTrait())
 
 class SrliOpHasCanonicalizationPatternsTrait(HasCanonicalizationPatternsTrait):
     @classmethod
@@ -1562,7 +1563,9 @@ class SrliOpHasCanonicalizationPatternsTrait(HasCanonicalizationPatternsTrait):
         from xdsl.transforms.canonicalization_patterns.riscv import ShiftRightbyZero
 
         return (ShiftRightbyZero(),)
-
+    
+class SrliOp(RdRsImmShiftOperation):
+    traits = traits_def(SrliOpHasCanonicalizationPatternsTrait())
 
 @irdl_op_definition
 class AddiwOp(RdRsImmIntegerOperation):
@@ -4852,7 +4855,7 @@ RISCV = Dialect(
         AndiOp,
         OriOp,
         XoriOp,
-        # SraiOp,
+        # SlliOp,
         LuiOp,
         AuipcOp,
         MVOp,

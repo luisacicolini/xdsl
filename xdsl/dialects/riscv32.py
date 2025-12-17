@@ -3,8 +3,8 @@ from __future__ import annotations
 from xdsl.dialects.riscv import (
     RdRsImmShiftOperation, 
     RISCVVariant, 
-    SlliOpHasCanonicalizationPatternsTrait, 
-    SrliOpHasCanonicalizationPatternsTrait,  
+    SrliOp, 
+    SlliOp,  
 )
 
 from typing import ClassVar
@@ -16,11 +16,10 @@ from xdsl.ir import (
 
 from xdsl.irdl import (
     irdl_op_definition,
-    traits_def,
 )
     
 @irdl_op_definition
-class RV32SlliOp(RdRsImmShiftOperation):
+class RV32SlliOp(SlliOp):
     """
     Performs logical left shift on the value in register rs1 by the shift amount
     held in the lower 5 bits of the immediate.
@@ -34,10 +33,8 @@ class RV32SlliOp(RdRsImmShiftOperation):
     
     RVVARIANT: ClassVar[RISCVVariant] = RISCVVariant.RV32
 
-    traits = traits_def(SlliOpHasCanonicalizationPatternsTrait())
-
 @irdl_op_definition
-class RV32SrliOp(RdRsImmShiftOperation):
+class RV32SrliOp(SrliOp):
     """
     Performs logical right shift on the value in register rs1 by the shift amount held
     in the lower 5 bits of the immediate.
@@ -50,8 +47,6 @@ class RV32SrliOp(RdRsImmShiftOperation):
     name = "riscv32.srli"
     
     RVVARIANT: ClassVar[RISCVVariant] = RISCVVariant.RV32
-
-    traits = traits_def(SrliOpHasCanonicalizationPatternsTrait())
     
     
 @irdl_op_definition
