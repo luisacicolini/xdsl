@@ -5,14 +5,12 @@ from xdsl.dialects.builtin import IntegerAttr
 from xdsl.dialects.utils import FastMathFlag
 from xdsl.ir import OpResult, SSAValue
 from xdsl.dialects.riscv import (SlliOp)
-from typing import Generic
 from xdsl.pattern_rewriter import (
     PatternRewriter,
     RewritePattern,
     op_type_rewrite_pattern,
 )
 from typing_extensions import TypeVar
-from typing import Generic
 
 class RemoveRedundantMv(RewritePattern):
     @op_type_rewrite_pattern
@@ -73,7 +71,7 @@ class MultiplyImmediates(RewritePattern):
 
 TargetOp = TypeVar("TargetOp", bound=SlliOp)
 
-class MultiplyByTwoToShiftLeft(RewritePattern, Generic[TargetOp]):
+class MultiplyByTwoToShiftLeft(RewritePattern):
     def __init__(self, target_op: type[TargetOp]):
         self.target_op = target_op
         

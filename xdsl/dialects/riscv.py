@@ -835,7 +835,6 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
     rd = result_def(IntRegisterType)
     rs1 = operand_def(IntRegisterType)
     immediate = attr_def(base(UImm6Attr) | base(LabelAttr))
-    
     VARIANT: ClassVar[RISCVVariant]
 
     def __init__(
