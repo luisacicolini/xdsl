@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from collections.abc import Set as AbstractSet
 from io import StringIO
-from typing import IO, Annotated, Any, Generic, Literal, TypeAlias
+from typing import IO, Annotated, Any, ClassVar, Generic, Literal, TypeAlias
 
 from typing_extensions import Self, TypeVar
 
@@ -170,6 +170,7 @@ class IntRegisterType(RISCVRegisterType):
         if not hasattr(cls, "_ALLOCATABLE_REGISTERS"):
             cls._ALLOCATABLE_REGISTERS = (*Registers.T, *Registers.A)
         return cls._ALLOCATABLE_REGISTERS
+
 
 _RV32F_ABI_INDEX_BY_NAME = {
     "ft0": 0,
@@ -834,6 +835,8 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
     rd = result_def(IntRegisterType)
     rs1 = operand_def(IntRegisterType)
     immediate = attr_def(base(UImm6Attr) | base(LabelAttr))
+    
+    VARIANT: ClassVar[RISCVVariant]
 
     def __init__(
         self,
@@ -844,7 +847,8 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
         comment: str | StringAttr | None = None,
     ):
         if isinstance(immediate, int):
-            immediate = IntegerAttr(immediate, ui6)
+            imm_type = self.VARIANT.shift_imm_width
+            immediate = IntegerAttr(immediate, imm_type)
         elif isinstance(immediate, str):
             immediate = LabelAttr(immediate)
 
@@ -865,7 +869,8 @@ class RdRsImmShiftOperation(RISCVCustomFormatOperation, RISCVInstruction, ABC):
     @classmethod
     def custom_parse_attributes(cls, parser: Parser) -> dict[str, Attribute]:
         attributes = dict[str, Attribute]()
-        attributes["immediate"] = parse_immediate_value(parser, ui6)
+        imm_type = cls.VARIANT.shift_imm_width
+        attributes["immediate"] = parse_immediate_value(parser, imm_type)
         return attributes
 
     def custom_print_attributes(self, printer: Printer) -> AbstractSet[str]:
@@ -1566,10 +1571,14 @@ class SlliOp(RdRsImmShiftOperation):
 @irdl_op_definition
 class SlliOp32(SlliOp):
     name = "riscv.v32.slli"
+    immediate = attr_def(base(UImm5Attr) | base(LabelAttr))
+    VARIANT: ClassVar[RISCVVariant] = RISCVVariant.RV32
     
 @irdl_op_definition
 class SlliOp64(SlliOp):
     name = "riscv.v64.slli"
+    immediate = attr_def(base(UImm6Attr) | base(LabelAttr))
+    VARIANT: ClassVar[RISCVVariant] = RISCVVariant.RV64
     
 class SrliOpHasCanonicalizationPatternsTrait(HasCanonicalizationPatternsTrait):
     @classmethod
@@ -1593,6 +1602,8 @@ class SrliOp(RdRsImmShiftOperation):
     name = "riscv.srli"
 
     traits = traits_def(SrliOpHasCanonicalizationPatternsTrait())
+    
+    
 
 
 @irdl_op_definition
@@ -4909,7 +4920,6 @@ RISCV = Dialect(
         AndiOp,
         OriOp,
         XoriOp,
-        # SlliOp,
         SlliOp32,
         SlliOp64,
         SrliOp,
@@ -4957,7 +4967,6 @@ RISCV = Dialect(
         CsrrwiOp,
         CsrrsiOp,
         CsrrciOp,
-        # MulOp,
         MulOp32,
         MulOp64,
         MulhOp,

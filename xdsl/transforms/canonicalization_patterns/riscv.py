@@ -4,7 +4,7 @@ from xdsl.dialects import riscv, riscv_snitch
 from xdsl.dialects.builtin import IntegerAttr
 from xdsl.dialects.utils import FastMathFlag
 from xdsl.ir import OpResult, SSAValue
-from xdsl.dialects.riscv import (ui6, SlliOp)
+from xdsl.dialects.riscv import (SlliOp)
 from typing import Generic
 from xdsl.pattern_rewriter import (
     PatternRewriter,
@@ -82,12 +82,12 @@ class MultiplyByTwoToShiftLeft(RewritePattern, Generic[TargetOp]):
         if (rs2 := get_constant_value(op.rs2)) is not None and rs2.value.data == 2:
             rd = cast(riscv.IntRegisterType, op.rd.type)
             rewriter.replace_matched_op(
-                self.target_op(op.rs1, IntegerAttr(1, ui6), rd=rd)
+                self.target_op(op.rs1, IntegerAttr(1, self.target_op.VARIANT.shift_imm_width), rd=rd)
             )
         elif (rs1 := get_constant_value(op.rs1)) is not None and rs1.value.data == 2:
             rd = cast(riscv.IntRegisterType, op.rd.type)
             rewriter.replace_matched_op(
-                self.target_op(op.rs2, IntegerAttr(1, ui6), rd=rd)
+                self.target_op(op.rs2, IntegerAttr(1, self.target_op.VARIANT.shift_imm_width), rd=rd)
             )
 
 class DivideByOneIdentity(RewritePattern):
