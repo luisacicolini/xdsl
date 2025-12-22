@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from collections.abc import Set as AbstractSet
 from io import StringIO
-from typing import IO, Annotated, Generic, Literal, TypeAlias
+from typing import IO, Annotated, Any, Generic, Literal, TypeAlias
 
 from typing_extensions import Self, TypeVar
 
@@ -40,6 +40,7 @@ from xdsl.ir import (
     Region,
     SSAValue,
     SSAValues,
+    StrEnum,
 )
 from xdsl.irdl import (
     IRDLOperation,
@@ -169,7 +170,6 @@ class IntRegisterType(RISCVRegisterType):
         if not hasattr(cls, "_ALLOCATABLE_REGISTERS"):
             cls._ALLOCATABLE_REGISTERS = (*Registers.T, *Registers.A)
         return cls._ALLOCATABLE_REGISTERS
-
 
 _RV32F_ABI_INDEX_BY_NAME = {
     "ft0": 0,
@@ -342,6 +342,13 @@ Imm12Attr = IntegerAttr[Annotated[IntegerType, i12]]
 Imm20Attr = IntegerAttr[Annotated[IntegerType, i20]]
 Imm32Attr = IntegerAttr[Annotated[IntegerType, i32]]
 
+class RISCVVariant(StrEnum):
+    RV32 = "rv32"
+    RV64 = "rv64"
+
+    @property
+    def shift_imm_width(self) -> IntegerType:
+        return ui5 if self == RISCVVariant.RV32 else ui6
 
 @irdl_attr_definition
 class LabelAttr(Data[str]):
@@ -1545,8 +1552,6 @@ class SlliOpHasCanonicalizationPatternsTrait(HasCanonicalizationPatternsTrait):
 
         return (ShiftLeftImmediate(), ShiftLeftbyZero())
 
-
-@irdl_op_definition
 class SlliOp(RdRsImmShiftOperation):
     """
     Performs logical left shift on the value in register rs1 by the shift amount
@@ -1556,12 +1561,16 @@ class SlliOp(RdRsImmShiftOperation):
 
     See external [documentation](https://msyksphinz-self.github.io/riscv-isadoc/html/rvi.html#slli).
     """
-
-    name = "riscv.slli"
-
     traits = traits_def(SlliOpHasCanonicalizationPatternsTrait())
 
-
+@irdl_op_definition
+class SlliOp32(SlliOp):
+    name = "riscv.v32.slli"
+    
+@irdl_op_definition
+class SlliOp64(SlliOp):
+    name = "riscv.v64.slli"
+    
 class SrliOpHasCanonicalizationPatternsTrait(HasCanonicalizationPatternsTrait):
     @classmethod
     def get_canonicalization_patterns(cls) -> tuple[RewritePattern, ...]:
@@ -2608,19 +2617,25 @@ class CsrrciOp(CsrBitwiseImmOperation):
 
 ## Multiplication Operations
 
+TargetOp = TypeVar("TargetOp", bound=SlliOp)
+_NoVars = TypeVar("_NoVars", default=Any)
 
-class MulOpHasCanonicalizationPatternsTrait(HasCanonicalizationPatternsTrait):
-    @classmethod
-    def get_canonicalization_patterns(cls) -> tuple[RewritePattern, ...]:
-        from xdsl.transforms.canonicalization_patterns.riscv import (
-            MultiplyImmediates,
-        )
+def make_mul_canonicalization_trait(
+    slli_op: type[SlliOp],
+) -> type[HasCanonicalizationPatternsTrait]:
 
-        return (MultiplyImmediates(),)
+    class MulOpHasCanonicalizationPatternsTrait(HasCanonicalizationPatternsTrait):
+        @classmethod
+        def get_canonicalization_patterns(cls) -> tuple[RewritePattern, ...]:
+            from xdsl.transforms.canonicalization_patterns.riscv import (
+                MultiplyImmediates,
+                MultiplyByTwoToShiftLeft,
+            )
+            return (MultiplyImmediates(), MultiplyByTwoToShiftLeft(slli_op),)
 
+    return MulOpHasCanonicalizationPatternsTrait
 
-@irdl_op_definition
-class MulOp(RdRsRsIntegerOperation[IntRegisterType, IntRegisterType]):
+class MulOp(RdRsRsIntegerOperation[IntRegisterType, IntRegisterType], Generic[_NoVars]):
     """
     Performs an XLEN-bit × XLEN-bit multiplication of signed rs1 by signed rs2
     and places the lower XLEN bits in the destination register.
@@ -2628,12 +2643,18 @@ class MulOp(RdRsRsIntegerOperation[IntRegisterType, IntRegisterType]):
 
     See external [documentation](https://msyksphinz-self.github.io/riscv-isadoc/html/rvi.html#add).
     """
+    pass
 
-    name = "riscv.mul"
-
-    traits = traits_def(MulOpHasCanonicalizationPatternsTrait(), Pure())
-
-
+@irdl_op_definition
+class MulOp32(MulOp[IntRegisterType]):
+    name = "riscv.v32.mul"
+    traits = traits_def(make_mul_canonicalization_trait(SlliOp32)(), Pure())
+    
+@irdl_op_definition
+class MulOp64(MulOp[IntRegisterType]):
+    name = "riscv.v64.mul"
+    traits = traits_def(make_mul_canonicalization_trait(SlliOp64)(), Pure())
+    
 @irdl_op_definition
 class MulhOp(RdRsRsIntegerOperation[IntRegisterType, IntRegisterType]):
     """
@@ -4888,7 +4909,9 @@ RISCV = Dialect(
         AndiOp,
         OriOp,
         XoriOp,
-        SlliOp,
+        # SlliOp,
+        SlliOp32,
+        SlliOp64,
         SrliOp,
         SraiOp,
         LuiOp,
@@ -4934,7 +4957,9 @@ RISCV = Dialect(
         CsrrwiOp,
         CsrrsiOp,
         CsrrciOp,
-        MulOp,
+        # MulOp,
+        MulOp32,
+        MulOp64,
         MulhOp,
         MulhsuOp,
         MulhuOp,

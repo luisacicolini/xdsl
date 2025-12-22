@@ -4,12 +4,15 @@ from xdsl.dialects import riscv, riscv_snitch
 from xdsl.dialects.builtin import IntegerAttr
 from xdsl.dialects.utils import FastMathFlag
 from xdsl.ir import OpResult, SSAValue
+from xdsl.dialects.riscv import (ui6, SlliOp)
+from typing import Generic
 from xdsl.pattern_rewriter import (
     PatternRewriter,
     RewritePattern,
     op_type_rewrite_pattern,
 )
-
+from typing_extensions import TypeVar
+from typing import Generic
 
 class RemoveRedundantMv(RewritePattern):
     @op_type_rewrite_pattern
@@ -68,6 +71,24 @@ class MultiplyImmediates(RewritePattern):
             case _:
                 return
 
+TargetOp = TypeVar("TargetOp", bound=SlliOp)
+
+class MultiplyByTwoToShiftLeft(RewritePattern, Generic[TargetOp]):
+    def __init__(self, target_op: type[TargetOp]):
+        self.target_op = target_op
+        
+    @op_type_rewrite_pattern
+    def match_and_rewrite(self, op: riscv.MulOp, rewriter: PatternRewriter) -> None:
+        if (rs2 := get_constant_value(op.rs2)) is not None and rs2.value.data == 2:
+            rd = cast(riscv.IntRegisterType, op.rd.type)
+            rewriter.replace_matched_op(
+                self.target_op(op.rs1, IntegerAttr(1, ui6), rd=rd)
+            )
+        elif (rs1 := get_constant_value(op.rs1)) is not None and rs1.value.data == 2:
+            rd = cast(riscv.IntRegisterType, op.rd.type)
+            rewriter.replace_matched_op(
+                self.target_op(op.rs2, IntegerAttr(1, ui6), rd=rd)
+            )
 
 class DivideByOneIdentity(RewritePattern):
     @op_type_rewrite_pattern
